@@ -1,0 +1,16 @@
+services:
+  # Frontend web service
+  - type: web
+    name: booklendiverse-web
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        value: mongodb+srv://panigrahibalram16:Ping420+@cluster0.ne7hd.mongodb.net/bookhiveDB
+      - key: SECRET_KEY
+        value: your_secret_key
+      - key: MONGODB_DB
+        value: bookhiveDB 

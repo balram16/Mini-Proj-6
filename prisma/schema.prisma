@@ -1,0 +1,45 @@
+model ForumPost {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  tags      String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  likes     Int      @default(0)
+
+  // Relations
+  author    User           @relation(fields: [authorId], references: [id])
+  authorId  String
+  book      Book?          @relation(fields: [bookId], references: [id])
+  bookId    String?
+  comments  ForumComment[]
+}
+
+model ForumComment {
+  id        String   @id @default(cuid())
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  likes     Int      @default(0)
+
+  // Relations
+  author    User      @relation(fields: [authorId], references: [id])
+  authorId  String
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+}
+
+// Add relations to User model
+model User {
+  // ... existing fields ...
+  forumPosts    ForumPost[]
+  forumComments ForumComment[]
+}
+
+// Add relation to Book model
+model Book {
+  // ... existing fields ...
+  location    Json?    // Stores the Location type as JSON
+  isAvailable Boolean  @default(true)
+  forumPosts  ForumPost[]
+} 
