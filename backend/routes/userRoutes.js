@@ -134,10 +134,15 @@ router.get('/me', verifyToken, async (req, res) => {
 // 🟠 Update user profile
 router.put("/profile", verifyToken, async (req, res) => {
   try {
+    console.log('Profile update request received');
+    console.log('User ID from token:', req.user.id);
+    console.log('Request body:', req.body);
+    
     const { name, email, phone, location, bio, upiId } = req.body;
     
     // Find user by id
     const user = await User.findById(req.user.id);
+    console.log('Found user:', user ? 'Yes' : 'No');
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -150,36 +155,69 @@ router.put("/profile", verifyToken, async (req, res) => {
     
     // Handle location properly based on schema
     if (location) {
-      // If location is a string, update the address part
-      if (typeof location === 'string') {
-        user.location = {
-          address: location,
-          city: user.location?.city || '',
-          state: user.location?.state || '',
-          coordinates: user.location?.coordinates || { lat: 0, lng: 0 }
-        };
-      } else if (typeof location === 'object') {
-        // If location is an object, update accordingly
-        user.location = {
-          address: location.address || user.location?.address || '',
-          city: location.city || user.location?.city || '',
-          state: location.state || user.location?.state || '',
-          coordinates: location.coordinates || user.location?.coordinates || { lat: 0, lng: 0 }
-        };
+      try {
+        console.log('Processing location update:', location);
+        // If location is a string, update the address part
+        if (typeof location === 'string') {
+          user.location = {
+            address: location,
+            city: user.location?.city || '',
+            state: user.location?.state || '',
+            coordinates: {
+              lat: user.location?.coordinates?.lat || 0,
+              lng: user.location?.coordinates?.lng || 0
+            }
+          };
+        } else if (typeof location === 'object') {
+          // If location is an object, update accordingly
+          user.location = {
+            address: location.address || user.location?.address || '',
+            city: location.city || user.location?.city || '',
+            state: location.state || user.location?.state || '',
+            coordinates: {
+              lat: location.coordinates?.lat || user.location?.coordinates?.lat || 0,
+              lng: location.coordinates?.lng || user.location?.coordinates?.lng || 0
+            }
+          };
+        }
+        console.log('Updated location:', user.location);
+      } catch (locationError) {
+        console.error('Error handling location update:', locationError);
+        return res.status(400).json({ 
+          message: "Error updating location", 
+          error: locationError.message 
+        });
       }
     }
     
     if (bio) user.bio = bio;
     if (upiId) user.upiId = upiId;
     
-    await user.save();
+    console.log('Attempting to save user with data:', user.toObject());
+    
+    try {
+      await user.save();
+      console.log('User saved successfully');
+    } catch (saveError) {
+      console.error('Error saving user:', saveError);
+      return res.status(500).json({ 
+        message: "Error saving user", 
+        error: saveError.message,
+        validationErrors: saveError.errors
+      });
+    }
     
     // Return user without password
     const userData = await User.findById(user._id).select('-password');
+    console.log('Sending response with user data');
     res.json(userData);
   } catch (err) {
-    console.error('Error updating profile:', err.message);
-    res.status(500).json({ message: "Error updating profile", error: err.message });
+    console.error('Error in profile update route:', err);
+    res.status(500).json({ 
+      message: "Error updating profile", 
+      error: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 });
 

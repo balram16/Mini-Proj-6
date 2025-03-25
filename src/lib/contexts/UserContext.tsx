@@ -382,6 +382,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       };
       
       console.log('Sending profile update data:', updateData);
+      console.log('Using token:', token);
       
       // Make API call to update profile
       const response = await fetch('http://localhost:5000/api/users/profile', {
@@ -394,29 +395,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
         credentials: 'include',
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update profile');
-      }
+      const responseData = await response.json();
+      console.log('Server response:', responseData);
       
-      // Parse response as JSON
-      const updatedUser = await response.json();
-      console.log('Received updated user data:', updatedUser);
+      if (!response.ok) {
+        throw new Error(responseData.message || responseData.error || 'Failed to update profile');
+      }
       
       // Update local user data
       setUser(prevUser => ({
         ...prevUser!,
-        ...updatedUser,
+        ...responseData,
       }));
       
       // Update localStorage
       localStorage.setItem('booklendiverse_user', JSON.stringify({
         ...user,
-        ...updatedUser,
+        ...responseData,
       }));
       
       toast.success('Profile updated successfully');
-      return updatedUser;
+      return responseData;
     } catch (error) {
       console.error('Error updating profile:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to update profile');
