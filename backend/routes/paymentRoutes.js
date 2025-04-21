@@ -242,5 +242,13 @@ router.get('/admin/all', auth, async (req, res) => {
     return res.status(500).json({ message: 'Server error' });
   }
 });
+   // backend/routes/paymentRoutes.js
+   router.post("/confirm-payment", auth, async (req, res) => {
+    const { transactionHash, bookId } = req.body;
+
+    // Verify the transaction on the Ethereum blockchain
+    // Use ethers.js or web3.js to check the transaction status
+    // Update the book status and transaction record in the database
+  });
 
 export default router; 

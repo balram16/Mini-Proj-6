@@ -56,7 +56,7 @@ router.get('/', async (req, res) => {
     }
     
     const books = await Book.find(query)
-      .populate('owner', 'name location avatar')
+      .populate('owner', 'name location avatar upiId')
       .sort(sortOption);
       
     res.json(books);
@@ -69,7 +69,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const book = await Book.findById(req.params.id)
-      .populate('owner', 'name email location avatar ratings')
+      .populate('owner', 'name email location avatar ratings upiId')
       .populate('reviews.user', 'name avatar')
       .populate('currentBorrower', 'name avatar')
       .populate('borrowingHistory.borrower', 'name avatar');
@@ -158,7 +158,7 @@ router.put('/:id', auth, async (req, res) => {
       req.params.id, 
       req.body, 
       { new: true }
-    ).populate('owner', 'name location avatar');
+    ).populate('owner', 'name location avatar upiId');
     
     res.json(updatedBook);
   } catch (err) {
@@ -239,7 +239,7 @@ router.post('/:id/reviews', auth, async (req, res) => {
 router.get('/user/:userId', async (req, res) => {
   try {
     const books = await Book.find({ owner: req.params.userId })
-      .populate('owner', 'name location avatar');
+      .populate('owner', 'name location avatar upiId');
       
     res.json(books);
   } catch (err) {

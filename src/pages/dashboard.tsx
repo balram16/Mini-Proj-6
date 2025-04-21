@@ -284,7 +284,7 @@ const DashboardPage = () => {
         title: formData.title,
         author: formData.author,
         description: formData.description,
-        // Set price or rentPrice based on transaction type
+        // Set price or rentPrice based on transaction type (values are in Rupees)
         price: formData.transactionType === 'buy' ? parseFloat(formData.price) : 0,
         rentPrice: formData.transactionType === 'rent' ? parseFloat(formData.price) : 0,
         depositAmount: formData.transactionType === 'rent' ? parseFloat(formData.price) * 2 : 0, // Sample deposit amount
@@ -740,8 +740,9 @@ const DashboardPage = () => {
                               value={formData.price}
                               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                               required
-                              placeholder={formData.transactionType === 'rent' ? 'Price per day' : 'One-time price'}
+                              placeholder={formData.transactionType === 'rent' ? 'Price in ₹ per day' : 'Price in ₹'}
                             />
+                            <p className="text-xs mt-1 text-gray-500">Enter price in Indian Rupees (₹). This amount will be directly used for payments.</p>
                           </div>
                           <div>
                             <label className="block text-sm font-medium mb-2">Genre</label>

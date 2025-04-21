@@ -6,60 +6,7 @@ import { cn } from '@/lib/utils';
 
 // Temporary mock data until we integrate with the API
 const mockBooks: BookType[] = [
-  {
-    id: '1',
-    title: 'The Great Gatsby',
-    author: 'F. Scott Fitzgerald',
-    coverImage: '/images/books/gatsby.jpg',
-    description: 'A story of decadence and excess, Gatsby explores the darker aspects of the Jazz Age.',
-    genre: ['Classic', 'Literary Fiction'],
-    rating: 4.5,
-    rentPrice: 3.99,
-    rentPeriod: '2 weeks',
-    owner: {
-      id: '101',
-      name: 'John Smith',
-      rating: 4.8,
-      location: 'New York, NY'
-    },
-    available: true
-  },
-  {
-    id: '2',
-    title: '1984',
-    author: 'George Orwell',
-    coverImage: '/images/books/1984.jpg',
-    description: 'A dystopian social science fiction novel that examines the consequences of totalitarianism.',
-    genre: ['Science Fiction', 'Dystopian'],
-    rating: 4.8,
-    rentPrice: 4.50,
-    rentPeriod: '3 weeks',
-    owner: {
-      id: '102',
-      name: 'Jane Doe',
-      rating: 4.9,
-      location: 'San Francisco, CA'
-    },
-    available: true
-  },
-  {
-    id: '3',
-    title: 'To Kill a Mockingbird',
-    author: 'Harper Lee',
-    coverImage: '/images/books/mockingbird.jpg',
-    description: 'A powerful story of racial injustice and the loss of innocence in the American South.',
-    genre: ['Classic', 'Historical Fiction'],
-    rating: 4.7,
-    rentPrice: 3.75,
-    rentPeriod: '2 weeks',
-    owner: {
-      id: '103',
-      name: 'Mike Johnson',
-      rating: 4.7,
-      location: 'Chicago, IL'
-    },
-    available: true
-  }
+
 ];
 
 const FeaturedBooks = () => {

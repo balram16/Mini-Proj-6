@@ -20,6 +20,7 @@ import Feature from 'ol/Feature';
 import Point from 'ol/geom/Point';
 import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style';
 import 'ol/ol.css';
+import PaymentModal from '@/components/PaymentModal';
 
 export default function BookDetail() {
   const router = useRouter();
@@ -30,17 +31,46 @@ export default function BookDetail() {
   const [imageError, setImageError] = useState(false);
   const mapRef = useRef(null);
   const [map, setMap] = useState(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [modalTransactionType, setModalTransactionType] = useState<'rent' | 'buy'>('rent');
   
   useEffect(() => {
     if (!id) return;
     
-    const books = getBooks();
-    const foundBook = books.find(b => b._id === id);
+    // Fetch book details from backend or context
+    const fetchBookDetails = async () => {
+      try {
+        setIsLoading(true);
+        
+        // First try to get from context for immediate display
+        const books = getBooks();
+        const foundBook = books.find(b => b._id === id);
+        
+        if (foundBook) {
+          setBook(foundBook);
+        }
+        
+        // Then try to fetch from backend to get complete data with owner details
+        try {
+          const response = await fetch(`http://localhost:5000/api/books/${id}`);
+          if (response.ok) {
+            const bookData = await response.json();
+            console.log("Backend book data:", bookData);
+            // This should have the populated owner field with upiId
+            setBook(bookData);
+          }
+        } catch (err) {
+          console.error("Error fetching book from backend:", err);
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching book details:", error);
+        setIsLoading(false);
+      }
+    };
     
-    if (foundBook) {
-      setBook(foundBook);
-    }
-    setIsLoading(false);
+    fetchBookDetails();
   }, [id, getBooks]);
 
   // Initialize map when book data is loaded
@@ -120,15 +150,60 @@ export default function BookDetail() {
   };
 
   const handleRentBook = () => {
+    console.log("Rent button clicked!");
     if (!user) {
       toast.error('Please log in to rent books');
       router.push('/login');
       return;
     }
-    
-    // In a real app, this would open a modal or redirect to a checkout page
-    toast.success('Book rental functionality would be implemented here');
+
+    if (!book) {
+        toast.error("Book details not loaded yet.");
+        return;
+    }
+
+    // Check if necessary data for RENT payment is available - removed wallet address check
+    if (typeof book.rentPrice !== 'number') {
+        toast.error("Rental price information is missing for this book.");
+        console.error("Missing rentPrice for rent:", book);
+        return;
+    }
+
+    // Set type and open the payment modal
+    console.log("Opening payment modal for RENT");
+    setModalTransactionType('rent');
+    setIsPaymentModalOpen(true);
+    console.log("isPaymentModalOpen set to:", true);
   };
+
+  // --- New function for handling Buy --- 
+  const handleBuyBook = () => {
+    console.log("Buy button clicked!");
+    if (!user) {
+      toast.error('Please log in to buy books');
+      router.push('/login');
+      return;
+    }
+
+    if (!book) {
+        toast.error("Book details not loaded yet.");
+        return;
+    }
+
+    // Check if necessary data for BUY payment is available - removed wallet address check
+    if (typeof book.price !== 'number') {
+        toast.error("Price information is missing for this book.");
+        console.error("Missing price for buy:", book);
+        return;
+    }
+
+    // Set type and open the payment modal
+    console.log("Opening payment modal for BUY");
+    setModalTransactionType('buy');
+    setIsPaymentModalOpen(true);
+    console.log("isPaymentModalOpen set to:", true);
+  };
+  // --- End new function --- 
 
   const handleBookmark = async () => {
     try {
@@ -194,6 +269,48 @@ export default function BookDetail() {
     );
   }
 
+  // Calculate prices and fees
+  const rentPrice = book.rentPrice || 0;
+  const buyPrice = book.price || 0;
+  // Convert prices to INR - Use direct values instead of conversion if already in INR
+  const rentPriceINR = rentPrice; // No conversion - assume already in INR
+  const buyPriceINR = buyPrice; // No conversion - assume already in INR
+  // Calculate deposit fee as 10x the daily rent
+  const depositFee = rentPriceINR * 10;
+  
+  // Use a hardcoded wallet address for testing if sellerWalletAddress is missing
+  const sellerWalletAddress = book.sellerWalletAddress || book.ownerWalletAddress || "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199";
+  
+  // Extract UPI ID from book owner - handle all possible data formats
+  let sellerUpiId = "demouser123@ybl"; // Default fallback
+  
+  // Debug all possible paths to the UPI ID
+  console.log("Owner data type:", typeof book.owner);
+  
+  if (book.owner) {
+    if (typeof book.owner === 'object') {
+      // Backend API would return a populated owner object
+      if (book.owner.upiId) {
+        sellerUpiId = book.owner.upiId;
+        console.log("Found UPI ID in owner object:", sellerUpiId);
+      }
+    } else if (typeof book.owner === 'string') {
+      // This could be just the owner ID, not populated
+      console.log("Owner is just an ID, not populated");
+    }
+  }
+
+  // --- Add Logs for Debugging ---
+  console.log("--- Book Data Debug ---");
+  console.log("User logged in:", !!user);
+  console.log("Book Data:", book); // Log the whole book object
+  console.log("Book Owner Data:", book.owner); // Log the owner data specifically
+  console.log("Final Seller UPI ID to be used:", sellerUpiId); // Log the final UPI ID
+  console.log("Seller Wallet Address found:", sellerWalletAddress);
+  console.log("Rent Price:", rentPrice, "INR:", rentPriceINR);
+  console.log("Buy Price:", buyPrice, "INR:", buyPriceINR);
+  console.log("---------------------------");
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -227,7 +344,7 @@ export default function BookDetail() {
               <div className="w-1 h-1 bg-muted rounded-full mx-3"></div>
               <div className="flex items-center text-muted-foreground">
                 <User className="w-4 h-4 mr-1" />
-                <span>{book.owner}</span>
+                <span>{typeof book.owner === 'object' ? book.owner.name || 'Unknown Seller' : typeof book.owner === 'string' ? book.owner : 'Unknown Seller'}</span>
               </div>
             </div>
             
@@ -252,15 +369,16 @@ export default function BookDetail() {
                     {book.transactionType === 'rent' ? 'Rent Price' : 'Price'}
                   </span>
                   <p className="font-medium">
-                    ₹{book.transactionType === 'rent' ? (book.rentPrice || 0).toFixed(2) : (book.price || 0).toFixed(2)}
-                    {book.transactionType === 'rent' ? ' / day' : ''}
+                    {book.transactionType === 'rent' 
+                      ? `₹${rentPriceINR.toFixed(2)} / day` 
+                      : `₹${buyPriceINR.toFixed(2)}`}
                   </p>
                 </div>
                 
                 {book.transactionType === 'rent' && (
                   <div>
                     <span className="text-sm text-muted-foreground">Deposit Required</span>
-                    <p className="font-medium">₹{((book.rentPrice || 0) * 2).toFixed(2)}</p>
+                    <p className="font-medium">₹{depositFee.toFixed(2)}</p>
                   </div>
                 )}
                 
@@ -329,7 +447,7 @@ export default function BookDetail() {
                     {book.transactionType === 'rent' ? 'Rental price' : 'Purchase price'}
                   </span>
                   <span className="text-2xl font-bold text-foreground">
-                    ₹{book.transactionType === 'rent' ? (book.rentPrice || 0).toFixed(2) : (book.price || 0).toFixed(2)}
+                    {book.transactionType === 'rent' ? `₹${rentPriceINR.toFixed(2)}` : `₹${buyPriceINR.toFixed(2)}`}
                   </span>
                   {book.transactionType === 'rent' && (
                     <span className="text-muted-foreground ml-1">/ day</span>
@@ -353,29 +471,71 @@ export default function BookDetail() {
                   <p className="text-sm text-muted-foreground">Payment Information</p>
                   <div className="flex items-center mt-1">
                     <span className="font-medium">UPI ID:</span>
-                    <code className="ml-2 bg-muted px-2 py-1 rounded text-sm">{book.owner.upiId}</code>
+                    <code className="ml-2 bg-muted px-2 py-1 rounded text-sm">
+                      {typeof book.owner === 'object' && book.owner?.upiId ? book.owner.upiId : sellerUpiId}
+                    </code>
                   </div>
                 </div>
               )}
               
-              <div className="flex gap-2">
-                <Button
-                  size="lg"
-                  className="flex-1"
-                  disabled={!book.available}
-                  onClick={handleRentBook}
-                >
-                  {book.available 
-                    ? (book.transactionType === 'rent' ? 'Rent Now' : 'Buy Now') 
-                    : 'Currently Unavailable'}
-                </Button>
-                
-                <Button
-                  size="lg"
-                  variant="outline"
+              <div className="mt-10 flex items-center gap-4">
+                {book.transactionType === 'rent' && (
+                  <Button
+                    size="lg"
+                    onClick={(e) => {
+                      // Prevent default to be sure
+                      e.preventDefault();
+                      // Use explicit function logic here
+                      console.log("Direct RENT button handler called");
+                      if (!user) {
+                        toast.error('Please log in to rent books');
+                        router.push('/login');
+                        return;
+                      }
+                      
+                      // Display toast message to confirm this handler is called
+                      toast.success('Opening payment modal for renting');
+                      
+                      setModalTransactionType('rent');
+                      setIsPaymentModalOpen(true);
+                    }}
+                    disabled={!user || typeof book.rentPrice !== 'number'}
+                  >
+                    Rent Book - ₹{rentPriceINR.toFixed(2)}/day
+                  </Button>
+                )}
+                {book.transactionType === 'buy' && (
+                  <Button
+                    size="lg"
+                    onClick={(e) => {
+                      // Prevent default to be sure
+                      e.preventDefault();
+                      // Use explicit function logic here
+                      console.log("Direct BUY button handler called");
+                      if (!user) {
+                        toast.error('Please log in to buy books');
+                        router.push('/login');
+                        return;
+                      }
+                      
+                      // Display toast message to confirm this handler is called
+                      toast.success('Opening payment modal for buying');
+                      
+                      setModalTransactionType('buy');
+                      setIsPaymentModalOpen(true);
+                    }}
+                    disabled={!user || typeof book.price !== 'number'}
+                  >
+                    Buy Book - ₹{buyPriceINR.toFixed(2)}
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="lg" 
                   onClick={handleBookmark}
+                  disabled={!user}
                 >
-                  Bookmark
+                  {user?.bookmarks?.includes(book._id) ? 'Remove Bookmark' : 'Add Bookmark'}
                 </Button>
               </div>
             </div>
@@ -383,6 +543,38 @@ export default function BookDetail() {
         </div>
       </main>
       <Footer />
+
+      {/* Render Payment Modal Conditionally - Now handles both types */}
+      {book && isPaymentModalOpen ? (
+        <>
+          {console.log("PAYMENT MODAL DEBUG:", { 
+            isModalOpen: isPaymentModalOpen, 
+            transactionType: modalTransactionType, 
+            bookAvailable: !!book 
+          })}
+          {toast.success("Opening payment modal - if you see this but no modal appears, there's a rendering issue")}
+          <PaymentModal
+            isOpen={isPaymentModalOpen}
+            onClose={() => {
+              console.log("Closing payment modal");
+              setIsPaymentModalOpen(false);
+            }}
+            bookId={book._id}
+            bookTitle={book.title}
+            transactionType={modalTransactionType}
+            price={modalTransactionType === 'rent' ? rentPriceINR : buyPriceINR}
+            sellerName={book.owner?.name || 'Unknown Seller'}
+            sellerWalletAddress={sellerWalletAddress}
+            sellerUpiId={sellerUpiId}
+            depositFee={depositFee}
+          />
+        </>
+      ) : (
+        console.log("PaymentModal not rendered, conditions:", { 
+          bookExists: !!book, 
+          isModalOpen: isPaymentModalOpen 
+        })
+      )}
     </div>
   );
 } 

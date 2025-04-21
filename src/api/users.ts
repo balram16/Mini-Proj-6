@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:5000/api/users"; // Adjust if needed
+const API_BASE_URL = "http://localhost:3000/api/users"; // Adjust if needed
 
 export const getUserProfile = async (userId: string) => {
   const response = await fetch(`${API_BASE_URL}/${userId}`, {
